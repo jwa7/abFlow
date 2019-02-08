@@ -38,67 +38,49 @@ function buildbasis(atoms,xyz_a0,basissetdef)
         for i=1:numel(basissetdef{K}.shelltype) % iterating over shell types 
                                                 % (i.e. 'S' then 'SP'..) 
             
-            isSP = false;
+            
             type = basissetdef{K}(i).shelltype;
             rad_exp = {};
+            q=1;
+            ifSP = false;
             
             if type == 'S'
                 subshells = [s];
-                rad_exp{i} = basissetdef{K}(i).exponents;
+                X=0;
             elseif type == 'SP'
                 subshells = [s; p_x; p_y; p_z];
-                isSP = true;
+                X=3;
+                ifSP = true;
             elseif type == 'P'
                 subshells = [p_x; p_y; p_z];
+                X=2;
             elseif type == 'D'
                 subshells = [d_x2; d_xy; d_xz; d_y2; d_yz; d_z2];
+                X=5;
             end     
             
             cart_exp = [cart_exp; subshells]; % px3 array of the cartesian exponenets
+            
+            for t=0:X
+                rad_exp{q+t} = basissetdef{K}(i).exponents;
+                q=q+X+1;
+            end
             
         end
         
         [m,n] = size(cart_exp); % number of basis functions given by m.
                                 % (number of rows in cartesian
                                 % exponent array)
-        
-        
-                                
-                                
+                               
         for p=1:m
             basis(p).atom = atoms(K);   % all m basis functions for atom K must be atom K
             basis(p).A = xyz_a0(K,:);   % same principle, but for nuclear coordinates
             basis(p).a = cart_exp(p,:); % each row in cart_exp corresponds to cartesian 
                                         % coordinate of the mth basis function
             
-            for i=1:numel(basissetdef{K}.shelltype)
-                q=1;
-                for j=1:m
-                    
-                    if type == 'S'
-                        rad_exp{q} = basissetdef{K}(i).exponents;
-                        q=q+1;
-                    elseif type == 'SP'
-                        for t=1:4
-                            rad_exp{q} = bas
-                        end
-                    elseif type == 'P'
-                    elseif type == 'D'
-                    end 
-                end
-            end
-        end
-            
-            if isSP == false
-                basis(p).alpha = basissetdef{K}(i).exponents; 
-            end
-        end
-            
-            
-            basis(K).a = [basis(K).a; subshells];
-            basis(K).alpha = rad_exp;
-            basis(K).d = [basis(K).d; coeffs];
-            
+            basis(p).alpha = rad_exp{p};
+            basis(p).d = 
+                                        
         end      
           
     end
