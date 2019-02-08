@@ -17,7 +17,8 @@
 %     basis(p).d      array of contraction coefficients
 %     basis(p).N      array of normalization constants
 
-function buildbasis(atoms,xyz_a0,basissetdef)
+function basis = buildbasis(atoms,xyz_a0,bdef)
+    % Cartesian Exponents for each subshell.
     s    = [0 0 0];
     p_x  = [1 0 0];
     p_y  = [0 1 0];
@@ -29,20 +30,21 @@ function buildbasis(atoms,xyz_a0,basissetdef)
     d_yz = [0 1 1];
     d_z2 = [0 0 2];
     
-    basis = struct;
-    
+    %basis = struct;
+    fac2 = @(n) prod(n:-2:1);
+
     for K=1:numel(atoms) % iterating over each atom in the atom list
         
         cart_exp = [];
         
-        for i=1:numel(basissetdef{K}.shelltype) % iterating over shell types 
+        for i=1:numel(bdef{K}.shelltype) % iterating over shell types 
                                                 % (i.e. 'S' then 'SP'..) 
             
-            
-            type = basissetdef{K}(i).shelltype;
+            type = bdef{K}(i).shelltype;
             rad_exp = {};
+            coeffs = {};
             q=1;
-            ifSP = false;
+            ifSP = 1;
             
             if type == 'S'
                 subshells = [s];
@@ -50,7 +52,7 @@ function buildbasis(atoms,xyz_a0,basissetdef)
             elseif type == 'SP'
                 subshells = [s; p_x; p_y; p_z];
                 X=3;
-                ifSP = true;
+                ifSP = 2;
             elseif type == 'P'
                 subshells = [p_x; p_y; p_z];
                 X=2;
@@ -59,19 +61,25 @@ function buildbasis(atoms,xyz_a0,basissetdef)
                 X=5;
             end     
             
-            cart_exp = [cart_exp; subshells]; % px3 array of the cartesian exponenets
-            
+            cart_exp = [cart_exp; subshells]; % mx3 array of the cartesian 
+                                              % exponenets where m is the 
+                                              % number of basis functions.
+
             for t=0:X
-                rad_exp{q+t} = basissetdef{K}(i).exponents;
-                q=q+X+1;
+                rad_exp{q+t} = bdef{K}(i).exponents;
+                coeffs{q+t} = bdef{K}(i).coeffs(1,:);
+                if (t>=1) && (ifSP==2)
+                    coeffs{q+t} = bdef{K}(i).coeffs(2,:);
+                end
             end
-            
+            q=q+X+1;
+
         end
         
         [m,n] = size(cart_exp); % number of basis functions given by m.
                                 % (number of rows in cartesian
                                 % exponent array)
-                               
+                                                               
         for p=1:m
             basis(p).atom = atoms(K);   % all m basis functions for atom K must be atom K
             basis(p).A = xyz_a0(K,:);   % same principle, but for nuclear coordinates
@@ -79,12 +87,12 @@ function buildbasis(atoms,xyz_a0,basissetdef)
                                         % coordinate of the mth basis function
             
             basis(p).alpha = rad_exp{p};
-            basis(p).d = 
-                                        
+            basis(p).d = coeffs(p);
+            basis(p).N = (2/pi)^(3/4)*(2^sum(basis(p).a))*basis(p).alpha.^(((2*sum(basis(p).a))+3)/4)/sqrt(fac2(2*basis(p).a(1)-1)*fac2(2*basis(p).a(2)-1)*fac2(2*basis(p).a(3)-1));                          
         end      
           
     end
     
-    return basis;
+    %return basis;
     
 end
