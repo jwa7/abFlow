@@ -30,15 +30,14 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
     d_yz = [0 1 1];
     d_z2 = [0 0 2];
     
-    %basis = struct;
-    fac2 = @(n) prod(n:-2:1);
+    fac2 = @(n) prod(n:-2:1); % evaluates double factorial of n
 
     for K=1:numel(atoms) % iterating over each atom in the atom list
         
         cart_exp = [];
         
         for i=1:numel(bdef{K}.shelltype) % iterating over shell types 
-                                                % (i.e. 'S' then 'SP'..) 
+                                         % (i.e. 'S' then 'SP'..) 
             
             type = bdef{K}(i).shelltype;
             rad_exp = {};
@@ -47,7 +46,7 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
             ifSP = 1;
             
             if type == 'S'
-                subshells = [s];
+                subshells = s;
                 X=0;
             elseif type == 'SP'
                 subshells = [s; p_x; p_y; p_z];
@@ -75,24 +74,22 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
             q=q+X+1;
 
         end
-        
+        disp(cart_exp)
         [m,n] = size(cart_exp); % number of basis functions given by m.
                                 % (number of rows in cartesian
                                 % exponent array)
                                                                
-        for p=1:m
+        for p=1*K:m*K
             basis(p).atom = atoms(K);   % all m basis functions for atom K must be atom K
             basis(p).A = xyz_a0(K,:);   % same principle, but for nuclear coordinates
-            basis(p).a = cart_exp(p,:); % each row in cart_exp corresponds to cartesian 
+            basis(p).a = cart_exp(p/K,:); % each row in cart_exp corresponds to cartesian 
                                         % coordinate of the mth basis function
             
-            basis(p).alpha = rad_exp{p};
-            basis(p).d = coeffs(p);
+            basis(p).alpha = rad_exp{p/K};
+            basis(p).d = coeffs{p/K};
             basis(p).N = (2/pi)^(3/4)*(2^sum(basis(p).a))*basis(p).alpha.^(((2*sum(basis(p).a))+3)/4)/sqrt(fac2(2*basis(p).a(1)-1)*fac2(2*basis(p).a(2)-1)*fac2(2*basis(p).a(3)-1));                          
         end      
           
     end
-    
-    %return basis;
-    
+        
 end
