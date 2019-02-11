@@ -159,7 +159,7 @@ for t = testid
   if M~=Mref
     ok = false;
     fprintf('   Number of basis functions for %s is not correct: %d given, %d expected.\n',...
-      testout(t).molecule,M,Mref);
+      testdata(t).molecule,M,Mref);
     break
   end
   
