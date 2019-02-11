@@ -37,63 +37,74 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
     
     for atomIndex=1:numel(atoms) % iterating over each atom in the atom list
         
-        cart_exp = [];
-        currentAtom = atoms(atomIndex); % The integer rep. of the current atom
-                                        % i.e. 6 for carbon.
+        currentAtom = atoms(atomIndex); % The integer representation of the 
+                                        % current atom (i.e. 6 for carbon).
+                                        
+        cart_exp = [];  % initialized array where cartesian exponenets will
+                        % be kept.
+                                
+        rad_exp = {};   % initialized cell arrays where radial exponents and
+        coeffs = {};    % contraction coefficients will be kept. 
+                        
         
-        rad_exp = {};
-        q=1;
-        coeffs = {};               
+        stagger = 1;    % determines where in the cell array to start filling
+                        % in values for the radial exponents and
+                        % contraction coefficients, based on the current
+                        % sub-shell. 
+
                                         
         for shellIndex=1:numel(bdef{currentAtom}) % iterating over shell types 
             
-            type = bdef{currentAtom}(shellIndex).shelltype;
-            ifSP = 1;
+            type = bdef{currentAtom}(shellIndex).shelltype; % shell type, string
+            ifSP = 1;   % 1 if shell isn't SP, 2 if it is
             
             if type == 'S'
                 subshells = s;
-                X=0;
+                skip=0;
             elseif type == 'SP'
                 subshells = [s; p_x; p_y; p_z];
-                X=3;
+                skip=3;
                 ifSP = 2;
             elseif type == 'P'
                 subshells = [p_x; p_y; p_z];
-                X=2;
+                skip=2;
             elseif type == 'D'
                 subshells = [d_x2; d_xy; d_xz; d_y2; d_yz; d_z2];
-                X=5;
+                skip=5;
             end     
             
             cart_exp = [cart_exp; subshells]; % mx3 array of the cartesian 
                                               % exponenets where m is the 
                                               % number of basis functions.
 
-            for t=0:X
-                rad_exp{q+t} = bdef{currentAtom}(shellIndex).exponents;
-                coeffs{q+t} = bdef{currentAtom}(shellIndex).coeffs(1,:);
-                if (t>=1) && (ifSP==2)
-                    coeffs{q+t} = bdef{currentAtom}(shellIndex).coeffs(2,:);
+            for i=0:skip
+                rad_exp{stagger+i} = bdef{currentAtom}(shellIndex).exponents;
+                coeffs{stagger+i} = bdef{currentAtom}(shellIndex).coeffs(1,:);
+                if (i>=1) && (ifSP==2)
+                    coeffs{stagger+i} = bdef{currentAtom}(shellIndex).coeffs(2,:);
                 end
             end
-            q=q+X+1;
+            
+            stagger=stagger+skip+1;
 
         end
+        
         [m,~] = size(cart_exp); % number of basis functions given by m.
                                 % (number of rows in cartesian
                                 % exponent array)
                                                                
-        for p=1:m
-            basis(numBasis).atom = currentAtom;         % all m basis functions for atom K must be atom K
-            basis(numBasis).A = xyz_a0(atomIndex,:);    % same principle, but for nuclear coordinates
-            basis(numBasis).a = cart_exp(p,:);          % each row in cart_exp corresponds to cartesian 
-                                                        % coordinate of the mth basis function
+        for j=1:m
+            basis(numBasis).atom = currentAtom;
+            basis(numBasis).A = xyz_a0(atomIndex,:);
+            basis(numBasis).a = cart_exp(j,:);          % each row in cart_exp corresponds to cartesian 
+                                                        % coordinates of the jth basis function
             
-            basis(numBasis).alpha = rad_exp{p};
-            basis(numBasis).d = coeffs{p};
+            basis(numBasis).alpha = rad_exp{j};
+            basis(numBasis).d = coeffs{j};
             
-            carts = basis(numBasis).a;
-            basis(numBasis).N = (2/pi)^(3/4)*(2^sum(carts))*basis(p).alpha.^(((2*sum(carts))+3)/4)/sqrt(fac2(2*carts(1)-1)*fac2(2*carts(2)-1)*fac2(2*carts(3)-1));                          
+            carts = 2*basis(numBasis).a;
+            alpha = basis(numBasis).alpha;
+            basis(numBasis).N = (2/pi)^(3/4)*(2^sum(carts/2))*alpha.^((sum(carts)+3)/4)/sqrt(fac2(carts(1)-1)*fac2(carts(2)-1)*fac2(carts(3)-1));                          
             
             numBasis = numBasis+1;
         end      
