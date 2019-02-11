@@ -41,12 +41,13 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
         currentAtom = atoms(atomIndex); % The integer rep. of the current atom
                                         % i.e. 6 for carbon.
         
-        for shellIndex=1:numel(bdef{currentAtom}.shelltype) % iterating over shell types 
+        rad_exp = {};
+        q=1;
+        coeffs = {};               
+                                        
+        for shellIndex=1:numel(bdef{currentAtom}) % iterating over shell types 
             
             type = bdef{currentAtom}(shellIndex).shelltype;
-            rad_exp = {};
-            coeffs = {};
-            q=1;
             ifSP = 1;
             
             if type == 'S'
@@ -69,7 +70,6 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
                                               % number of basis functions.
 
             for t=0:X
-                basis(q+t).atom = currentAtom;
                 rad_exp{q+t} = bdef{currentAtom}(shellIndex).exponents;
                 coeffs{q+t} = bdef{currentAtom}(shellIndex).coeffs(1,:);
                 if (t>=1) && (ifSP==2)
@@ -84,7 +84,7 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
                                 % exponent array)
                                                                
         for p=1:m
-            basis(numBasis).atom = currentAtom;    % all m basis functions for atom K must be atom K
+            basis(numBasis).atom = currentAtom;         % all m basis functions for atom K must be atom K
             basis(numBasis).A = xyz_a0(atomIndex,:);    % same principle, but for nuclear coordinates
             basis(numBasis).a = cart_exp(p,:);          % each row in cart_exp corresponds to cartesian 
                                                         % coordinate of the mth basis function
@@ -92,7 +92,7 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
             basis(numBasis).alpha = rad_exp{p};
             basis(numBasis).d = coeffs{p};
             
-            carts = basis(p).a;
+            carts = basis(numBasis).a;
             basis(numBasis).N = (2/pi)^(3/4)*(2^sum(carts))*basis(p).alpha.^(((2*sum(carts))+3)/4)/sqrt(fac2(2*carts(1)-1)*fac2(2*carts(2)-1)*fac2(2*carts(3)-1));                          
             
             numBasis = numBasis+1;
