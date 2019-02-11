@@ -18,6 +18,7 @@
 %     basis(p).N      array of normalization constants
 
 function basis = buildbasis(atoms,xyz_a0,bdef)
+
     % Cartesian Exponents for each subshell.
     s    = [0 0 0];
     p_x  = [1 0 0];
@@ -37,11 +38,12 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
     for atomIndex=1:numel(atoms) % iterating over each atom in the atom list
         
         cart_exp = [];
+        currentAtom = atoms(atomIndex); % The integer rep. of the current atom
+                                        % i.e. 6 for carbon.
         
-        for shellIndex=1:numel(bdef{atoms(atomIndex)}.shelltype) % iterating over shell types 
-                                                % (i.e. 'S' then 'SP'..) 
+        for shellIndex=1:numel(bdef{currentAtom}.shelltype) % iterating over shell types 
             
-            type = bdef{atomIndex}(shellIndex).shelltype;
+            type = bdef{currentAtom}(shellIndex).shelltype;
             rad_exp = {};
             coeffs = {};
             q=1;
@@ -67,23 +69,22 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
                                               % number of basis functions.
 
             for t=0:X
-                basis(q+t).atom = atoms(atomIndex);
-                rad_exp{q+t} = bdef{atomIndex}(shellIndex).exponents;
-                coeffs{q+t} = bdef{atomIndex}(shellIndex).coeffs(1,:);
+                basis(q+t).atom = currentAtom;
+                rad_exp{q+t} = bdef{currentAtom}(shellIndex).exponents;
+                coeffs{q+t} = bdef{currentAtom}(shellIndex).coeffs(1,:);
                 if (t>=1) && (ifSP==2)
-                    coeffs{q+t} = bdef{atomIndex}(shellIndex).coeffs(2,:);
+                    coeffs{q+t} = bdef{currentAtom}(shellIndex).coeffs(2,:);
                 end
             end
             q=q+X+1;
 
         end
-        disp(rad_exp)
         [m,~] = size(cart_exp); % number of basis functions given by m.
                                 % (number of rows in cartesian
                                 % exponent array)
                                                                
         for p=1:m
-            basis(numBasis).atom = atoms(atomIndex);    % all m basis functions for atom K must be atom K
+            basis(numBasis).atom = currentAtom;    % all m basis functions for atom K must be atom K
             basis(numBasis).A = xyz_a0(atomIndex,:);    % same principle, but for nuclear coordinates
             basis(numBasis).a = cart_exp(p,:);          % each row in cart_exp corresponds to cartesian 
                                                         % coordinate of the mth basis function
