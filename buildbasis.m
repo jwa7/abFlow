@@ -30,16 +30,18 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
     d_yz = [0 1 1];
     d_z2 = [0 0 2];
     
-    fac2 = @(n) prod(n:-2:1); % evaluates double factorial of n
-
-    for K=1:numel(atoms) % iterating over each atom in the atom list
+    fac2 = @(n) prod(n:-2:1); % evaluates the double factorial of n
+    numBasis = 1; % initialization of a variable to keep track of how many
+                  % basis functions have been recorded.
+    
+    for atomIndex=1:numel(atoms) % iterating over each atom in the atom list
         
         cart_exp = [];
         
-        for i=1:numel(bdef{K}.shelltype) % iterating over shell types 
-                                         % (i.e. 'S' then 'SP'..) 
+        for shellIndex=1:numel(bdef{atoms(atomIndex)}.shelltype) % iterating over shell types 
+                                                % (i.e. 'S' then 'SP'..) 
             
-            type = bdef{K}(i).shelltype;
+            type = bdef{atomIndex}(shellIndex).shelltype;
             rad_exp = {};
             coeffs = {};
             q=1;
@@ -65,29 +67,34 @@ function basis = buildbasis(atoms,xyz_a0,bdef)
                                               % number of basis functions.
 
             for t=0:X
-                rad_exp{q+t} = bdef{K}(i).exponents;
-                coeffs{q+t} = bdef{K}(i).coeffs(1,:);
+                basis(q+t).atom = atoms(atomIndex);
+                rad_exp{q+t} = bdef{atomIndex}(shellIndex).exponents;
+                coeffs{q+t} = bdef{atomIndex}(shellIndex).coeffs(1,:);
                 if (t>=1) && (ifSP==2)
-                    coeffs{q+t} = bdef{K}(i).coeffs(2,:);
+                    coeffs{q+t} = bdef{atomIndex}(shellIndex).coeffs(2,:);
                 end
             end
             q=q+X+1;
 
         end
-        disp(cart_exp)
-        [m,n] = size(cart_exp); % number of basis functions given by m.
+        disp(rad_exp)
+        [m,~] = size(cart_exp); % number of basis functions given by m.
                                 % (number of rows in cartesian
                                 % exponent array)
                                                                
-        for p=1*K:m*K
-            basis(p).atom = atoms(K);   % all m basis functions for atom K must be atom K
-            basis(p).A = xyz_a0(K,:);   % same principle, but for nuclear coordinates
-            basis(p).a = cart_exp(p/K,:); % each row in cart_exp corresponds to cartesian 
-                                        % coordinate of the mth basis function
+        for p=1:m
+            basis(numBasis).atom = atoms(atomIndex);    % all m basis functions for atom K must be atom K
+            basis(numBasis).A = xyz_a0(atomIndex,:);    % same principle, but for nuclear coordinates
+            basis(numBasis).a = cart_exp(p,:);          % each row in cart_exp corresponds to cartesian 
+                                                        % coordinate of the mth basis function
             
-            basis(p).alpha = rad_exp{p/K};
-            basis(p).d = coeffs{p/K};
-            basis(p).N = (2/pi)^(3/4)*(2^sum(basis(p).a))*basis(p).alpha.^(((2*sum(basis(p).a))+3)/4)/sqrt(fac2(2*basis(p).a(1)-1)*fac2(2*basis(p).a(2)-1)*fac2(2*basis(p).a(3)-1));                          
+            basis(numBasis).alpha = rad_exp{p};
+            basis(numBasis).d = coeffs{p};
+            
+            carts = basis(p).a;
+            basis(numBasis).N = (2/pi)^(3/4)*(2^sum(carts))*basis(p).alpha.^(((2*sum(carts))+3)/4)/sqrt(fac2(2*carts(1)-1)*fac2(2*carts(2)-1)*fac2(2*carts(3)-1));                          
+            
+            numBasis = numBasis+1;
         end      
           
     end
