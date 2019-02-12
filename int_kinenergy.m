@@ -42,12 +42,12 @@ for mu=1:M     % iterates over all basis functions in basis
                 I3D_kinetic = 0;
                 
                 for omega=1:3   % iterating over components x, y, z
+                    I_omega = 0;
                     
-                    I_omega = beta_l*(2*b(omega)+1)*integral_3D(alpha_k,beta_l,A,B,a,b) ...
-                              -2*beta_l^2*integral_3D(alpha_k,beta_l,A,B,a,b+2);
-                          
-                    if b < 2     
-                        I_omega = I_omega - 0.5*b(omega)*(b(omega)-1)*integral_3D(alpha_k,beta_l,A,B,a,b-2);
+                    if b >= 2
+                        I_omega = beta_l*(2*b(omega)+1)*integral_3D(alpha_k,beta_l,A,B,a,b) ...
+                                  -2*beta_l^2*integral_3D(alpha_k,beta_l,A,B,a,b+2);
+                                  -0.5*b(omega)*(b(omega)-1)*integral_3D(alpha_k,beta_l,A,B,a,b-2);
                     end
                     
                     I3D_kinetic = I3D_kinetic + I_omega;
