@@ -143,7 +143,7 @@ if ~exist('buildbasis.m','file')
 end
 
 for t = testid
-  teststr = teststring(testdata(t));
+  teststr = testsummary(testdata(t));
   fprintf('  Test %2d: %s \n',t,teststr);
   
   bdef = basisread(testdata(t).basisset);
@@ -154,13 +154,35 @@ for t = testid
   
   M = numel(basis);
   Mref = numel(basisref);
-
+  
   % Verify that we have the correct number of basis functions
   if M~=Mref
     ok = false;
     fprintf('   Number of basis functions for %s is not correct: %d given, %d expected.\n',...
       testdata(t).molecule,M,Mref);
     break
+  end
+  
+  % Verify that all the fields are present
+  fieldnames = {'atom','A','a','alpha','d','N'};
+  for ifn = 1:numel(fieldnames)
+    if ~isfield(basis,fieldnames{ifn})
+      ok = false;
+      error('The basis function list missed the field %s.',fieldnames{ifn});
+    end
+  end
+  
+  % Verify that all fields have the correct type and size
+  for p = 1:M
+    for ifn = 1:numel(fieldnames)
+      fn = fieldnames{ifn};
+      if ~isa(basis(p).(fn),class(basisref(p).(fn)))
+        error('The field basis(%d).%s has the wrong type.',p,fn);
+      end
+      if ~isequal(size(basis(p).(fn)),size(basisref(p).(fn)))
+        error('The field basis(%d).%s has the wrong size.',p,fn);
+      end
+    end
   end
   
   % Verify that we have the correct ordering of basis functions
@@ -386,7 +408,7 @@ for i = testid
   Vne = int_attraction(testdata(i).atoms,testdata(i).xyz_a0,basis);
   
   Vne_ref = testout(i).Vne;
-  abserr = (Vne(:)-Vne_ref(:));
+  abserr = abs(Vne(:)-Vne_ref(:));
   maxabserr = max(abserr(:));
   ok = all(abserr(:)<threshold);
   
@@ -544,7 +566,7 @@ for iFile  = 1:numel(filenames)
 end
 
 for t = testid
-  teststr = teststring(testdata(t));
+  teststr = testsummary(testdata(t));
   isDFT = strcmp(testdata(t).method,'RKS');
   if ~isDFT
     fprintf('  Test %2d: %s -- skipped\n',t,teststr);
@@ -586,7 +608,7 @@ threshold = 1e-7;
 fprintf('  error threshold:   %e\n',threshold);
 
 for t = testid
-  teststr = teststring(testdata(t));
+  teststr = testsummary(testdata(t));
   isDFT = strcmp(testdata(t).method,'RKS');
   if ~isDFT
     fprintf('  Test %2d: %s -- skipped\n',t,teststr);
@@ -670,7 +692,7 @@ end
 runDFT = strcmp(testmethod,'DFT');
 
 for t = testid
-  teststr = teststring(testdata(t));
+  teststr = testsummary(testdata(t));
   isDFT = strcmp(testdata(t).method,'RKS');
   if xor(runDFT,isDFT)
     fprintf('  Test %2d: %s -- skipped\n',t,teststr);
@@ -718,40 +740,41 @@ for t = testid
   else
       fprintf('     epsilon missing!              -- FAIL\n');
   end 
-  
+    
   % Compare MO coefficient matrix, C
-  % (phase is not defined; test only occupied; issues with degenerate occupieds)
-  if isfield(out,'C')
-    nElectrons = sum(testdata(t).atoms)-testdata(t).charge;
-    C_threshold = 1e-6;
-    C = mocoeffrephase(out.C,testout(t).C);
-    occ = 1:nElectrons/2;
-    C_occ = C(:,occ);
-    Cref_occ = testout(t).C(:,occ);
-    C_err = max(abs(C_occ-Cref_occ));
-    C_err = max(C_err);
-    if C_err>C_threshold
-      ok = false;
-      fprintf('     C       error %e    -- FAIL\n',C_err);
-    else
-      fprintf('     C       error %e    -- pass\n',C_err);
-    end
+  if ~isfield(out,'C')
+    ok = false;
+    fprintf('     C       missing!              -- FAIL\n');
+  elseif ~isequal(size(out.C),size(testout(t).C))
+    ok = false;
+    fprintf('     C       error: wrong size   -- FAIL\n');
   else
-      fprintf('     C       missing!              -- FAIL\n');
+    nElectrons = sum(testdata(t).atoms)-testdata(t).charge;
+    occ = 1:nElectrons/2;
+    C_occ = out.C(:,occ);
+    C_occ_ref = testout(t).C(:,occ);
+    theta = subspace(C_occ,C_occ_ref); % angle between occupied subspaces, ideally zero
+    C_threshold = 1e-7;
+    if theta > C_threshold
+      ok = false;
+      fprintf('     C       error %e    -- FAIL\n',theta);
+    else
+      fprintf('     C       error %e    -- pass\n',theta);
+    end
   end
   
   % Compare density matrix, P
-  if isfield(out,'P')
+  if ~isfield(out,'P')
+    fprintf('     P       missing!              -- FAIL\n');
+  else
     P_threshold = 1e-6;
     P_err = max(abs(out.P(:)-testout(t).P(:)));
-    if P_err>P_threshold
+    if P_err > P_threshold
       ok = false;
       fprintf('     P       error %e    -- FAIL\n',P_err);
     else
       fprintf('     P       error %e    -- pass\n',P_err);
     end
-  else
-      fprintf('     P       missing!              -- FAIL\n');
   end
   
   % Compare electronic energy, E0
@@ -855,18 +878,7 @@ end % motest
 
 
 %===============================================================================
-function C_ = mocoeffrephase(C,Cref)
-C_ = C;
-for j = 1:size(C,2)
-  [~,idx] = max(abs(Cref(:,j)));
-  if sign(C(idx,j))~=sign(Cref(idx,j))
-    C_(:,j) = -C(:,j);
-  end
-end
-end
-
-%===============================================================================
-function str = teststring(t)
+function str = testsummary(t)
 str = [t.molecule '|' t.method '|' t.basisset];
 if length(str)<16, str(16) = ' '; end
 end
