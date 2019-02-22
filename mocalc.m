@@ -31,13 +31,13 @@
 function out = mocalc(atoms,xyz_a0,totalcharge,settings)
 
 % Cleaning the inputs.
-BasisSetName = settings.basis;
-tolEner      = settings.tolEnergy;
-tolDens      = settings.tolDensity;
+BasisSetName    = settings.basisset;       
+E_tol           = settings.tolEnergy;   % tolerance energy change (hartrees)
+P_tol           = settings.tolDensity;  % tolerance density element change ((a0)^-3)
 
 % Defining some variables that will be used throughout.
-out = {};
-M = numel(basis);
+out = {};                           % initializing the return structure.
+N = sum(atoms) - totalcharge;       % total # of e in molecule.
 
 % Building the outputs.
 bdef      = basisread(BasisSetName);
@@ -46,6 +46,7 @@ S         = int_overlap(basis);                 % symmetrized, diagonals = 1
 T         = int_kinenergy(basis);
 Vne       = int_attraction(atoms,xyz_a0,basis);
 ERI       = int_repulsion(basis);
+M         = numel(basis);                       % number of basis functions.
 J         = zeros(M);                           % initializing Coulomb matrix
 for mu = 1:M
     for nu = 1:M
@@ -56,36 +57,47 @@ for mu = 1:M
         end
     end
 end
-K            = -0.5 * J;            % due to symmetry of 2e integrals.
+K = -0.5 * J;   % due to symmetry of 2e integrals.
 
 % SCF Loop.
 counter = 0;
+while true      % mimicking a C++ do-while loop.
+    counter = counter + 1;
+    if counter == 1
+        F = T + Vne;                % initial approx F matrix (ignore e-e rep).
+    else
+        F = T + Vne + (J - K)*P;    % MxM F matrix for SCF iterations after
+                                    % starting density matrix has been
+                                    % estimated.
+    end
+    F            = (F*F.')/10;      % symmetrization & downscaling.
+    [C,epsi]     = eig(F,S);        % Matlab's general eigenproblem solver to
+                                    % approx MO coeff and energy matrices.
+    diagonals    = diag(epsi);      % diagonal energy matrix -> column vect.             
+    [sorted,idx] = sort(diagonals);
+    epsi         = sorted;         % 1xM row vector, vals in ascending order. 
+    C            = C(:,idx);        % C sorted based on sorted e values.
+    for k = 1:M
+      norms(k) = sqrt(C(:,k).'*S*C(:,k));
+    end
+    C_norm = C./norms;              % normalizing C.
+    P = 2*(C*C.');                  % estimation of starting density matrix.
+    E = sum(epsi);
 
-% while above tolerance
-if counter == 0
-    F = T + Vne;                % initial approx F matrix (ignore e-e rep).
-else
-    F = T + Vne + (J + K)*P;    % MxM F matrix for SCF iterations after
-                                % starting density matrix has been
-                                % estimated.
+    if counter > 1
+        E_change = E - E_prev;
+        P_change = max(abs((P(:) - P_prev(:))));
+
+        if E_change < E_tol && P_change < P_tol
+            break;
+        end
+    end
+    
+    E_prev = E;
+    P_prev = P;
 end
-F            = (F*F.')/100;     % symmetrization & downscaling.
-[C,epsi]     = eig(F,S);        % Matlab's general eigenproblem solver to
-                                % approx MO coeff and energy matrices.
-diagonals    = diag(epsi);      % diagonal energy matrix -> column vect.             
-[sorted,idx] = sort(diagonals);
-epsi         = sorted';         % 1xM row vector, vals in ascending order. 
-C            = C(:,idx);        % C sorted based on sorted e values.
-for k = 1:M
-  norms(k) = sqrt(C(:,k)'*S*C(:,k));
-end
-C = C./norms;                   % normalizing C.
-P = 2*C*C.';                    % estimation of starting density matrix.
 
-
-N = sum(atoms) - totalcharge;       % total # of e in molecule
-assert(trace(P) == N);
-
+% assert(trace(P) == N);
 
 out.basis   = basis;
 out.S       = S;
@@ -96,7 +108,9 @@ out.J       = J;
 out.K       = K;
 out.epsilon = epsi;
 out.C       = C;
-
+out.P       = P;
+out.E0      = epsi(1);
+out.Etot    = E;
 end
  
  
