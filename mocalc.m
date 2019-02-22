@@ -58,7 +58,7 @@ for mu = 1:M
         end
     end
 end
-K = -0.5 * J;   % due to symmetry of 2e integrals.
+K = 0.5 * J;   % due to symmetry of 2e integrals.
 
 % SCF Loop.
 counter = 0;
