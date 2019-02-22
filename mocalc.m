@@ -45,6 +45,7 @@ basis     = buildbasis(atoms,xyz_a0,bdef);
 S         = int_overlap(basis);                 % symmetrized, diagonals = 1
 T         = int_kinenergy(basis);
 Vne       = int_attraction(atoms,xyz_a0,basis);
+Vnn       = nucnucrepulsion(atoms,xyz_a0);
 ERI       = int_repulsion(basis);
 M         = numel(basis);                       % number of basis functions.
 J         = zeros(M);                           % initializing Coulomb matrix
@@ -61,7 +62,8 @@ K = -0.5 * J;   % due to symmetry of 2e integrals.
 
 % SCF Loop.
 counter = 0;
-while true      % mimicking a C++ do-while loop.
+run = true;
+while run      % mimicking a C++ do-while loop.
     counter = counter + 1;
     if counter == 1
         F = T + Vne;                % initial approx F matrix (ignore e-e rep).
@@ -75,25 +77,32 @@ while true      % mimicking a C++ do-while loop.
                                     % approx MO coeff and energy matrices.
     diagonals    = diag(epsi);      % diagonal energy matrix -> column vect.             
     [sorted,idx] = sort(diagonals);
-    epsi         = sorted;         % 1xM row vector, vals in ascending order. 
+    epsi         = sorted';         % 1xM row vector, vals in ascending order.
     C            = C(:,idx);        % C sorted based on sorted e values.
     for k = 1:M
       norms(k) = sqrt(C(:,k).'*S*C(:,k));
     end
-    C_norm = C./norms;              % normalizing C.
-    P = 2*(C*C.');                  % estimation of starting density matrix.
-    E = sum(epsi);
-
+    C = C./norms;                   % normalizing C.
+    C_occ = C(:,1:N/2);             % reducing C to occupied orbitals only
+    P = 2*(C_occ*C_occ.');          % estimation of starting density matrix.
+    E0 = 0;
+    for mu = 1:M
+        for nu = 1:M
+            E0 = E0 + P(mu,nu) + T(mu,nu) + Vne(mu,nu) + 0.5*ERI(mu,nu);
+        end
+    end
+    Etot = E0 + Vnn;
+    
     if counter > 1
-        E_change = E - E_prev;
+        E_change = Etot - E_prev;
         P_change = max(abs((P(:) - P_prev(:))));
 
         if E_change < E_tol && P_change < P_tol
-            break;
+            run = false;
         end
     end
     
-    E_prev = E;
+    E_prev = Etot;
     P_prev = P;
 end
 
@@ -109,8 +118,8 @@ out.K       = K;
 out.epsilon = epsi;
 out.C       = C;
 out.P       = P;
-out.E0      = epsi(1);
-out.Etot    = E;
+out.E0      = E0;
+out.Etot    = Etot;
 end
  
  
