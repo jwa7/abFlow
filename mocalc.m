@@ -48,22 +48,13 @@ Vne       = int_attraction(atoms,xyz_a0,basis);
 Vnn       = nucnucrepulsion(atoms,xyz_a0);
 ERI       = int_repulsion(basis);
 M         = numel(basis);                       % number of basis functions.
-J         = zeros(M);                           % initializing Coulomb matrix
-for mu = 1:M
-    for nu = 1:M
-        for kap = 1:M
-            for lam = 1:M
-                J(mu,nu) = J(mu,nu) + ERI(mu,kap,nu,lam); % calc J elements
-            end
-        end
-    end
-end
-K = 0.5 * J;   % due to symmetry of 2e integrals.
+J         = zeros(M);                           % initializing Coulomb matrix.
+K         = zeros(M);                           % initializing Exchange matrix.
 
 % SCF Loop.
 counter = 0;
-run = true;
-while run      % mimicking a C++ do-while loop.
+converged = false;
+while ~converged      % mimicking a C++ do-while loop.
     counter = counter + 1;
     if counter == 1
         F = T + Vne;                % initial approx F matrix (ignore e-e rep).
@@ -72,7 +63,7 @@ while run      % mimicking a C++ do-while loop.
                                     % starting density matrix has been
                                     % estimated.
     end
-    F            = (F*F.')/10;      % symmetrization & downscaling.
+%     F            = (F*F.')/10;      % symmetrization & downscaling.
     [C,epsi]     = eig(F,S);        % Matlab's general eigenproblem solver to
                                     % approx MO coeff and energy matrices.
     diagonals    = diag(epsi);      % diagonal energy matrix -> column vect.             
@@ -84,13 +75,37 @@ while run      % mimicking a C++ do-while loop.
     end
     C = C./norms;                   % normalizing C.
     C_occ = C(:,1:N/2);             % reducing C to occupied orbitals only
-    P = 2*(C_occ*C_occ.');          % estimation of starting density matrix.
+    P = 2*C_occ*C_occ.';          % estimation of starting density matrix.
+    
+    for mu = 1:M
+        for nu = 1:M
+            for kap = 1:M
+                for lam = 1:M
+%                 multiply ERI by density
+                    J(mu,nu) = J(mu,nu) + P(kap,lam)*ERI(mu,kap,nu,lam); % calc J elements
+                end
+            end
+        end
+    end
+%     K = 0.5 .* J;   % due to symmetry of 2e integrals.
+    for mu = 1:M
+        for nu = 1:M
+            for kap = 1:M
+                for lam = 1:M
+%                 multiply ERI by density
+                    K(mu,nu) = K(mu,nu) + 0.5*P(kap,lam)*ERI(mu,kap,lam,nu); % calc J elements
+                end
+            end
+        end
+    end
+    
     E0 = 0;
     for mu = 1:M
         for nu = 1:M
-            E0 = E0 + P(mu,nu) + T(mu,nu) + Vne(mu,nu) + 0.5*ERI(mu,nu);
+            E0 = E0 + P(mu,nu)*(T(mu,nu) + Vne(mu,nu) + 0.5*(J(mu,nu) - K(mu,nu)));
         end
     end
+    
     Etot = E0 + Vnn;
     
     if counter > 1
@@ -98,7 +113,7 @@ while run      % mimicking a C++ do-while loop.
         P_change = max(abs((P(:) - P_prev(:))));
 
         if E_change < E_tol && P_change < P_tol
-            run = false;
+            converged = true;
         end
     end
     
