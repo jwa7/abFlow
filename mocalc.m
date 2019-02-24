@@ -48,52 +48,40 @@ Vne       = int_attraction(atoms,xyz_a0,basis);
 Vnn       = nucnucrepulsion(atoms,xyz_a0);
 ERI       = int_repulsion(basis);
 M         = numel(basis);                       % number of basis functions.
-J         = zeros(M);                           % initializing Coulomb matrix.
-K         = zeros(M);                           % initializing Exchange matrix.
+
 
 % SCF Loop.
 counter = 0;
 converged = false;
-while ~converged      % mimicking a C++ do-while loop.
+while ~converged    
     counter = counter + 1;
     if counter == 1
-        F = T + Vne;                % initial approx F matrix (ignore e-e rep).
+        F = T + Vne;        % initial approx F matrix (ignore e-e rep).
     else
-        F = T + Vne + (J - K)*P;    % MxM F matrix for SCF iterations after
-                                    % starting density matrix has been
-                                    % estimated.
+        F = T + Vne + P;    % MxM F matrix for SCF iterations after
+                            % starting density matrix has been estimated.
     end
-%     F            = (F*F.')/10;      % symmetrization & downscaling.
     [C,epsi]     = eig(F,S);        % Matlab's general eigenproblem solver to
                                     % approx MO coeff and energy matrices.
     diagonals    = diag(epsi);      % diagonal energy matrix -> column vect.             
     [sorted,idx] = sort(diagonals);
-    epsi         = sorted';         % 1xM row vector, vals in ascending order.
-    C            = C(:,idx);        % C sorted based on sorted e values.
+    epsi         = sorted;          % Mx1 matrix of energy vals in ascending order.
     for k = 1:M
       norms(k) = sqrt(C(:,k).'*S*C(:,k));
+      C(:,k) = C(:,k)./norms(k);    % normalizing C
     end
-    C = C./norms;                   % normalizing C.
-    C_occ = C(:,1:N/2);             % reducing C to occupied orbitals only
-    P = 2*C_occ*C_occ.';          % estimation of starting density matrix.
+    C     = C(:,idx);           % C sorted based on sorted e values.
+    C_occ = C(:,1:N/2);         % reducing C to occupied orbitals only
+    P     = 2*(C_occ*C_occ.');  % estimation of starting density matrix.
     
+    J         = zeros(M);                           % initializing Coulomb matrix.
+    K         = zeros(M);                           % initializing Exchange matrix.
     for mu = 1:M
-        for nu = 1:M
-            for kap = 1:M
-                for lam = 1:M
-%                 multiply ERI by density
-                    J(mu,nu) = J(mu,nu) + P(kap,lam)*ERI(mu,kap,nu,lam); % calc J elements
-                end
-            end
-        end
-    end
-%     K = 0.5 .* J;   % due to symmetry of 2e integrals.
-    for mu = 1:M
-        for nu = 1:M
-            for kap = 1:M
-                for lam = 1:M
-%                 multiply ERI by density
-                    K(mu,nu) = K(mu,nu) + 0.5*P(kap,lam)*ERI(mu,kap,lam,nu); % calc J elements
+        for nu = 1:mu
+            for kap = 1:mu
+                for lam = 1:kap
+                    J(mu,nu) = J(mu,nu) + P(kap,lam)*ERI(mu,nu,lam,kap); % calc J elements
+                    K(mu,nu) = K(mu,nu) + 0.5*P(kap,lam)*ERI(mu,kap,lam,nu); % calc K elements
                 end
             end
         end
@@ -101,23 +89,20 @@ while ~converged      % mimicking a C++ do-while loop.
     
     E0 = 0;
     for mu = 1:M
-        for nu = 1:M
+        for nu = 1:mu
             E0 = E0 + P(mu,nu)*(T(mu,nu) + Vne(mu,nu) + 0.5*(J(mu,nu) - K(mu,nu)));
         end
     end
     
-    Etot = E0 + Vnn;
-    
     if counter > 1
-        E_change = Etot - E_prev;
+        E_change = E0 - E0_prev;
         P_change = max(abs((P(:) - P_prev(:))));
-
         if E_change < E_tol && P_change < P_tol
             converged = true;
         end
     end
     
-    E_prev = Etot;
+    E0_prev = E0;
     P_prev = P;
 end
 
@@ -134,7 +119,7 @@ out.epsilon = epsi;
 out.C       = C;
 out.P       = P;
 out.E0      = E0;
-out.Etot    = Etot;
+out.Etot    = E0 + Vnn;
 end
  
  
