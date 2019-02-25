@@ -57,7 +57,7 @@ out.T       = T;
 % SCF Loop.
 counter = 0;
 converged = false;
-while ~converged    
+while ~converged 
     counter = counter + 1;
     if counter == 1
         F = T + Vne;        % initial approx F matrix (ignore e-e rep).
@@ -66,12 +66,14 @@ while ~converged
                             % starting density matrix has been estimated.
     end
     [C,epsi]  = eig(F,S);        % Matlab's general eigenproblem solver to
-                                    % approx MO coeff and energy matrices.
+                                 % approx MO coeff and energy matrices.
                                     
 
     diagonals = diag(epsi);      % diagonal energy matrix -> column vect. 
     [sorted,idx] = sort(diagonals);
-    epsi         = sorted;          % Mx1 matrix of energy vals in ascending order.
+    epsi         = sorted;       % Mx1 matrix of energy vals in ascending order.
+    
+    
     for k = 1:M
       norms(k) = sqrt(C(:,k).'*S*C(:,k));
       C(:,k) = C(:,k)./norms(k);    % normalizing C
@@ -82,6 +84,7 @@ while ~converged
     
     J         = zeros(M);                           % initializing Coulomb matrix.
     K         = zeros(M);                           % initializing Exchange matrix.
+    
     for mu = 1:M
         for nu = 1:M
             for kap = 1:M
