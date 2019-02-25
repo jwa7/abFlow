@@ -49,6 +49,10 @@ Vnn       = nucnucrepulsion(atoms,xyz_a0);
 ERI       = int_repulsion(basis);
 M         = numel(basis);                       % number of basis functions.
 
+out.ERI     = ERI;
+out.S       = S;
+out.Vne     = Vne;
+out.T       = T;
 
 % SCF Loop.
 counter = 0;
@@ -61,9 +65,11 @@ while ~converged
         F = T + Vne + P;    % MxM F matrix for SCF iterations after
                             % starting density matrix has been estimated.
     end
-    [C,epsi]     = eig(F,S);        % Matlab's general eigenproblem solver to
+    [C,epsi]  = eig(F,S);        % Matlab's general eigenproblem solver to
                                     % approx MO coeff and energy matrices.
-    diagonals    = diag(epsi);      % diagonal energy matrix -> column vect.             
+                                    
+
+    diagonals = diag(epsi);      % diagonal energy matrix -> column vect. 
     [sorted,idx] = sort(diagonals);
     epsi         = sorted;          % Mx1 matrix of energy vals in ascending order.
     for k = 1:M
@@ -77,9 +83,9 @@ while ~converged
     J         = zeros(M);                           % initializing Coulomb matrix.
     K         = zeros(M);                           % initializing Exchange matrix.
     for mu = 1:M
-        for nu = 1:mu
-            for kap = 1:mu
-                for lam = 1:kap
+        for nu = 1:M
+            for kap = 1:M
+                for lam = 1:M
                     J(mu,nu) = J(mu,nu) + P(kap,lam)*ERI(mu,nu,lam,kap); % calc J elements
                     K(mu,nu) = K(mu,nu) + 0.5*P(kap,lam)*ERI(mu,kap,lam,nu); % calc K elements
                 end
@@ -88,9 +94,9 @@ while ~converged
     end
     
     E0 = 0;
-    for mu = 1:M
-        for nu = 1:mu
-            E0 = E0 + P(mu,nu)*(T(mu,nu) + Vne(mu,nu) + 0.5*(J(mu,nu) - K(mu,nu)));
+    for u = 1:M
+        for v = 1:M
+            E0 = E0 + P(u,v)*(T(u,v) + Vne(u,v) + 0.5*(J(u,v) - K(u,v)));
         end
     end
     
@@ -104,15 +110,8 @@ while ~converged
     
     E0_prev = E0;
     P_prev = P;
-end
-
-% assert(trace(P) == N);
-
+    
 out.basis   = basis;
-out.S       = S;
-out.T       = T;
-out.Vne     = Vne;
-out.ERI     = ERI;
 out.J       = J;
 out.K       = K;
 out.epsilon = epsi;
@@ -120,6 +119,12 @@ out.C       = C;
 out.P       = P;
 out.E0      = E0;
 out.Etot    = E0 + Vnn;
+
+end
+
+% assert(trace(P) == N);
+
+
 end
  
  
