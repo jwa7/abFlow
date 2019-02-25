@@ -49,10 +49,12 @@ Vnn       = nucnucrepulsion(atoms,xyz_a0);
 ERI       = int_repulsion(basis);
 M         = numel(basis);                       % number of basis functions.
 
-out.ERI     = ERI;
+out.basis   = basis;
 out.S       = S;
-out.Vne     = Vne;
 out.T       = T;
+out.Vne     = Vne;
+out.ERI     = ERI;
+
 
 % SCF Loop.
 counter = 0;
@@ -62,7 +64,7 @@ while ~converged
     if counter == 1
         F = T + Vne;        % initial approx F matrix (ignore e-e rep).
     else
-        F = T + Vne + P;    % MxM F matrix for SCF iterations after
+        F = T + ERI + Vne + P;    % MxM F matrix for SCF iterations after
                             % starting density matrix has been estimated.
     end
     [C,epsi]  = eig(F,S);        % Matlab's general eigenproblem solver to
@@ -82,8 +84,8 @@ while ~converged
     C_occ = C(:,1:N/2);         % reducing C to occupied orbitals only
     P     = 2*(C_occ*C_occ.');  % estimation of starting density matrix.
     
-    J         = zeros(M);                           % initializing Coulomb matrix.
-    K         = zeros(M);                           % initializing Exchange matrix.
+    J         = zeros(M);   % initializing Coulomb matrix.
+    K         = zeros(M);   % initializing Exchange matrix.
     
     for mu = 1:M
         for nu = 1:M
@@ -114,19 +116,16 @@ while ~converged
     E0_prev = E0;
     P_prev = P;
     
-out.basis   = basis;
+end
+
+% assert(trace(P) == N);
 out.J       = J;
 out.K       = K;
-out.epsilon = epsi;
+out.epsilon = diagonals;
 out.C       = C;
 out.P       = P;
 out.E0      = E0;
 out.Etot    = E0 + Vnn;
-
-end
-
-% assert(trace(P) == N);
-
 
 end
  
