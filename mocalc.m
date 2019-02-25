@@ -55,17 +55,16 @@ out.T       = T;
 out.Vne     = Vne;
 out.ERI     = ERI;
 
-
 % SCF Loop.
 counter = 0;
 converged = false;
 while ~converged 
     counter = counter + 1;
     if counter == 1
-        F = T + Vne;        % initial approx F matrix (ignore e-e rep).
+        F = T + Vne;            % initial approx F matrix (ignore e-e rep).
     else
-        F = T + ERI + Vne + P;    % MxM F matrix for SCF iterations after
-                            % starting density matrix has been estimated.
+        F = T + Vne + J - K;    % MxM F matrix for SCF iterations after
+                                % starting density matrix has been estimated.
     end
     [C,epsi]  = eig(F,S);        % Matlab's general eigenproblem solver to
                                  % approx MO coeff and energy matrices.
@@ -118,10 +117,9 @@ while ~converged
     
 end
 
-% assert(trace(P) == N);
 out.J       = J;
 out.K       = K;
-out.epsilon = diagonals;
+out.epsilon = epsi;
 out.C       = C;
 out.P       = P;
 out.E0      = E0;
