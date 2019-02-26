@@ -30,15 +30,15 @@ thresholds.Vne = 1e-7; % attraction integrals
 thresholds.ERI = 1e-7; % electron-electron repulsion integrals
 thresholds.Vee = 1e-6; % electron-electron repulsion matrix elements
 thresholds.Vnn = 1e-7; % nuclear repulsion energy
-thresholds.epsilon = 1e-7; % orbital energies
-thresholds.FCSCe = 1e-7; % F*C - S*C*epsilon 
-thresholds.Cnorms = 1e-7; % norms of MO coefficent vectors
-thresholds.Ctheta = 1e-7; % angle between occ. MO subspaces
-thresholds.P = 1e-6; % density matrix elements
-thresholds.E0 = 1e-6; % electronic energy
-thresholds.Etot = 1e-6; % total clamped-nuclei energy
-thresholds.Exc = 1e-6; % exchange-correlation energy
-thresholds.Vxc = 1e-7; % exchange-correlation integrals
+thresholds.epsilon = 1e-6; % orbital energies
+thresholds.FCSCe = 1e-6; % F*C - S*C*epsilon 
+thresholds.Cnorms = 1e-6; % norms of MO coefficent vectors
+thresholds.Ctheta = 1e-6; % angle between occ. MO subspaces
+thresholds.P = 1e-5; % density matrix elements
+thresholds.E0 = 1e-5; % electronic energy
+thresholds.Etot = 1e-5; % total clamped-nuclei energy
+thresholds.Exc = 1e-5; % exchange-correlation energy
+thresholds.Vxc = 1e-5; % exchange-correlation integrals
 thresholds.bfeval = 1e-8; % basis function evaluation
 thresholds.rhoInt = 1e-3; % density integral
 %-----------------------------------------------------------------------------
@@ -110,7 +110,7 @@ for iTest = 1:numel(testname)
     case 'bfeval'
       pass = motest_bfeval();
     case 'grid'
-      pass = motest_molgrid(testid);
+      pass = motest_grid(testid);
     case 'xc'
       pass = motest_xc(testid);
     case 'dft'
@@ -560,8 +560,19 @@ v_ref = [...
   -0.115037421352772, ...
    0.011503742135277];
 
-fprintf('  error threshold:   %e\n',thresholds.bfeval);
+% Make sure eval_bf() returns one value per grid point
+xyz_a0_array = 2*rand(7,3)-1;
+bf.a = [0 0 0];
+v = eval_bf(bf,xyz_a0_array);
+if numel(v)~=size(xyz_a0_array,1)
+  fprintf('  return one value/point        -- FAIL\n');
+else
+  fprintf('  return one value/point        -- pass\n');
+end
 
+fprintf('  error threshold: %e\n',thresholds.bfeval);
+
+xyz_a0 = [0.1 0.5 0.3];
 str = {'s','px','py','pz','dxx','dxy','dxz','dyy','dyz','dzz'};
 for k = 1:size(a,1)
   bf.a = a(k,:);
@@ -569,16 +580,16 @@ for k = 1:size(a,1)
   bf_err = abs(v(k)-v_ref(k));
   if bf_err > thresholds.bfeval
     ok = false;
-    fprintf('   %3s   error %e -- FAIL\n',str{k},bf_err);
+    fprintf('     %3s   error   %e -- FAIL\n',str{k},bf_err);
   else
-    fprintf('   %3s   error %e -- pass\n',str{k},bf_err);
+    fprintf('     %3s   error   %e -- pass\n',str{k},bf_err);
   end
 end
 
 end
 
 %===============================================================================
-function ok = motest_molgrid(testid)
+function ok = motest_grid(testid)
   
 filenames = {'molecular_grid.m','atomic_grid.m','partitionweights.m','lebedev_grid.m'};
 ok = true;
@@ -624,40 +635,39 @@ ok = true;
 
 if ~exist('int_xc.m','file')
   ok = false;
-  disp('   File int_repulsion.m is missing.');
+  disp('   File int_xc.m is missing.');
   return
 end
 
-fprintf('  Vxc error threshold:   %e\n',thresholds.Vxc);
+fprintf('  Vxc    error threshold %e\n',thresholds.Vxc);
+fprintf('  Exc    error threshold %e\n',thresholds.Exc);
+fprintf('  rhoInt error threshold %e\n',thresholds.rhoInt);
 
 for t = testid
   teststr = testsummary(testdata(t));
   isDFT = strcmp(testdata(t).method,'RKS');
-  if ~isDFT
-    fprintf('  Test %2d: %s -- skipped\n',t,teststr);
-    continue
-  else
-    fprintf('  Test %2d: %s \n',t,teststr);
-  end
+  if ~isDFT, continue; end
+  
+  fprintf('  Test %2d: %s \n',t,teststr);
   
   bdef = basisread(testdata(t).basisset);
   basis = buildbasis(testdata(t).atoms,testdata(t).xyz_a0,bdef);
   atoms = testdata(t).atoms;
   xyz_a0 = testdata(t).xyz_a0;
-  Exch = testdata(t).ExchFunctional;
-  Corr = testdata(t).CorrFunctional;
+  ExchFcnl = testdata(t).ExchFunctional;
+  CorrFcnl = testdata(t).CorrFunctional;
   nRadial = testdata(t).nRadialPoints;
   nAngular = testdata(t).nAngularPoints;
   P = testout(t).P;
   
   grid = molecular_grid(atoms,xyz_a0,nRadial,nAngular);
-  [Vxc,Exc,rhoInt] = int_xc(basis,P,grid,Exch,Corr);
+  [Vxc,Exc,rhoInt] = int_xc(basis,P,grid,ExchFcnl,CorrFcnl);
   
   % Test Vxc, matrix of exchange-correlation integrals
   Vxc_ref = testout(t).Vxc;
   Vxc_err = maxabsdiff(Vxc,Vxc_ref);
   
-  fprintf('     Vxc    error %e',Vxc_err);
+  fprintf('     Vxc    error %e Eh ',Vxc_err);
   if Vxc_err > thresholds.Vxc
     fprintf(' -- FAIL\n');
     ok = false;
@@ -669,7 +679,7 @@ for t = testid
   Exc_ref = testout(t).Exc;
   Exc_err = abs(Exc-Exc_ref);
   
-  fprintf('     Exc    error %e',Exc_err);
+  fprintf('     Exc    error %e Eh ',Exc_err);
   if Exc_err > thresholds.Exc
     fprintf(' -- FAIL\n');
     ok = false;
@@ -678,10 +688,11 @@ for t = testid
   end
 
   % Test rhoInt, integral of electron density
-  rhoInt_ref = sum(atoms)-testdata(t).charge;
+  nElectrons = sum(atoms)-testdata(t).charge;
+  rhoInt_ref = nElectrons;
   rhoInt_err = abs(rhoInt-rhoInt_ref);
   
-  fprintf('     rhoInt error %e',rhoInt_err);
+  fprintf('     rhoInt error %e    ',rhoInt_err);
   if rhoInt_err > thresholds.rhoInt
     fprintf(' -- FAIL\n');
     ok = false;
@@ -717,11 +728,9 @@ for t = testid
   teststr = testsummary(testdata(t));
   isDFT = strcmp(testdata(t).method,'RKS');
   if xor(runDFT,isDFT)
-    fprintf('  Test %2d: %s -- skipped\n',t,teststr);
     continue
-  else
-    fprintf('  Test %2d: %s \n',t,teststr);
   end
+  fprintf('  Test %2d: %s \n',t,teststr);
   
   % Assemble input and call mocalc()
   atoms = testdata(t).atoms;
