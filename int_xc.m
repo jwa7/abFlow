@@ -1,4 +1,4 @@
-% int_xc calculates the matrix of exchange-correlation integrams in Vxc, the
+% int_xc calculates the matrix of exchange-correlation integrals in Vxc, the
 % exchange-correlation energy in Exc, and the integral over the electron
 % density in rhoInt.
 
