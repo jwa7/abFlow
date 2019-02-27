@@ -1,6 +1,6 @@
-%int_xc calculates the matrix of exchange-correlation integrams in Vxc, the
-%echange-coirrelation energy in Exc, and the integral over the electro
-%ndensity in rhoInt.
+% int_xc calculates the matrix of exchange-correlation integrams in Vxc, the
+% exchange-correlation energy in Exc, and the integral over the electron
+% density in rhoInt.
 
 function [Vxc,Exc,rhoInt] = int_xc(basis,P,grid,ExchFunctional,CorrFunctional)
 M = length(basis);
