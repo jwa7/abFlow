@@ -9,21 +9,13 @@ for mu=1:M %Evalutes all basis functions at each grid point
     basisfxn(:,mu) = eval_bf(basis(mu),grid.xyz);
 end
 
-rhotemp = zeros(length(grid.xyz),1);
+rho = zeros(length(grid.xyz),1);
 
 for mu = 1:M %Calculates product of two basis functions and density rho
     for nu = 1:M
-        rhotemp = rhotemp + basisfxn(:,mu).*basisfxn(:,nu).*P(mu,nu);
+        rho = rho + basisfxn(:,mu).*basisfxn(:,nu).*P(mu,nu);
     end
 end
-
-rho = rhotemp;
-rhoInt = sum(grid.weights .* rho);
-
-%Slater exchange
-Cx = (3/4)*(3/pi)^(1/3);
-epsi_x = -Cx*rho.^(1/3);
-Vx = -4/3 * Cx * rho.^(1/3);
 
 %Vosko-Wilk-Nusair correlation
 if CorrFunctional == 'VWM3'
@@ -35,16 +27,42 @@ else
     c = 12.9352;
     x0 = -0.10498;
 end
-
-%Constants/definitions and calculations for VWM Correlation
 A = 0.0310907; %Eh
-x = (3/(4*pi*rho)).^(1/6);
 Q = sqrt(4*c-b^2);
-eta = atan(Q./(2*x+b));
-xi = @(zeta) zeta.^2 +b.*zeta + c;
-epsi_c = A.*(log(x.^2 ./ xi(x)) + 2*b.*eta./Q - (b*x0./xi(x0)) .* (log((x-x0).^2 ./ xi(x)) + (2.*(2*x0+b).*eta)/Q));
+Cx = (3/4)*(3/pi)^(1/3);
 
-Vc = epsi_c - A/3 * (c*(x-x0)-b*x*x0)/(xi(x).*(x-x0));
+
+epsi_c = [];
+Vx = 0;
+Vc = 0;
+rhoInt = 0;
+for r=1:numel(rho)
+    
+    if rho(r)>0
+    
+        rhoInt = rhoInt + grid.weights.*rho(r);
+
+        %Slater exchange
+        epsi_x(r) = -Cx*rho(r).^(1/3);
+        Vx(r) = -4/3 * Cx * rho(r).^(1/3);
+
+        %Constants/definitions and calculations for VWM Correlation
+        x = (3/(4*pi*rho(r))).^(1/6);
+        eta = atan(Q./(2*x+b));
+        xi = @(zeta) zeta.^2 +b.*zeta + c;
+        epsi_c(r) = A.*(log(x.^2 ./ xi(x)) + 2*b.*eta./Q - (b*x0./xi(x0)) .* (log((x-x0).^2 ./ xi(x)) + (2.*(2*x0+b).*eta)/Q));
+
+        Vc(r) = epsi_c(r) - A/3 * (c*(x-x0)-b*x*x0)/(xi(x).*(x-x0));
+    else 
+        Vx(r) = 0;
+        Vc(r) = 0;
+    end
+    Vx = Vx + Vx_tmp;
+    Vc = Vc + Vc_tmp;
+    Exc = Exc + (epsi_x + epsi_c').*rho(r);
+
+end
+
 Vxc_rho = Vx + Vc';
 
 for mu=1:M
@@ -52,7 +70,6 @@ for mu=1:M
         Vxc(mu,nu) = sum(basisfxn(:,mu).*basisfxn(:,nu).*Vxc_rho);
     end
 end
-Exc =sum((epsi_x + epsi_c').*rho);
 
 end
 
