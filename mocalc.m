@@ -187,6 +187,10 @@ while ~converged
 
         E0_prev = E0;
         P_prev = P;
+        
+        out.Exc     = Exc;
+        out.Vxc     = Vxc;
+        out.rhoInt  = rhoInt;
     end
     
 end
@@ -198,9 +202,7 @@ out.C       = C;
 out.P       = P;
 out.E0      = E0;
 out.Etot    = E0 + Vnn;
-out.Exc     = Exc;
-out.Vxc     = Vxc;
-out.rhoInt  = rhoInt;
+
 
 end
  
