@@ -1,5 +1,3 @@
-% grid = molecular_grid(atoms,xyz_a0,nRadialPoints,nAngularPoints)
-%
 % Generates a full grid for the evaluation of the exchange-correlation
 % integrals in DFT. the function returns the Cartesian coordinates of all
 % grid points and their respective weights.
