@@ -132,6 +132,7 @@ while ~converged
         nRadialPoints   = settings.nRadialPoints;
         nAngularPoints  = settings.nAngularPoints;
         grid = molecular_grid(atoms,xyz_a0,nRadialPoints,nAngularPoints);
+        K = 0;
         
         if counter == 1
             F = T + Vne;             % initial approx F matrix (ignore e-e rep).
@@ -152,17 +153,17 @@ while ~converged
         end
         C     = C(:,idx);           % C sorted based on sorted e values.
         C_occ = C(:,1:N/2);         % reducing C to occupied orbitals only
-        P     = C_occ*C_occ.';  % estimation of starting density matrix.
+        P     = 2*(C_occ*C_occ.');  % estimation of starting density matrix.
 
         J         = zeros(M);   % initializing Coulomb matrix.
-        K         = zeros(M);   % initializing Exchange matrix.
+%         K         = zeros(M);   % initializing Exchange matrix.
 
         for mu = 1:M
             for nu = 1:M
                 for kap = 1:M
                     for lam = 1:M
                         J(mu,nu) = J(mu,nu) + P(kap,lam)*ERI(mu,nu,lam,kap); % calc J elements
-                        K(mu,nu) = K(mu,nu) + P(kap,lam)*ERI(mu,kap,lam,nu); % calc K elements
+%                         K(mu,nu) = K(mu,nu) + P(kap,lam)*ERI(mu,kap,lam,nu); % calc K elements
                     end
                 end
             end
