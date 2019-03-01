@@ -8,7 +8,7 @@
 %     settings            a structure that contains several fields:
 %       .basisset           string specifying the basis set, e.g. '6-31G', 'cc-pVDZ', 'STO-3G'    
 %       .tolEnergy          SCF convergence tolerance for the energy (hartrees)
-%       .tolDensity         SCF convergence tolerance for the density ((a0)^?3)
+%       .tolDensity         SCF convergence tolerance for the density (a0^3)
 %       .method             string specifying the method, either 'RHF' for restricted Hartree-Fock 
 %                           or 'RKS' for restricted Kohn-Sham DFT
 %       .ExchFunctional     string specifying the exchange functional, 'Slater'
