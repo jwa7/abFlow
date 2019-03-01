@@ -60,7 +60,7 @@ for r=1:numel(rho)
         Vx(r) = 0;
         Vc(r) = 0;
     end
-    Vxc_rho = Vxc_rho + (Vx(r) + Vc(r).')*grid.weights(r);
+    Vxc_rho = Vxc_rho + (Vx(r) + Vc(r))'*grid.weights(r);
     Exc = Exc + (epsi_x + epsi_c).*rho(r)*grid.weights(r);
 
 end
