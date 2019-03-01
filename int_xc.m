@@ -27,50 +27,55 @@ else
     c = 12.9352;
     x0 = -0.10498;
 end
-A = 0.0310907; %Eh
+A = 0.0310907; % Eh
 Q = sqrt(4*c-b^2);
 Cx = (3/4)*(3/pi)^(1/3);
 
 rhoInt = 0;
-Vx = [];
-Vc = [];
-Vxc = [];
+Vx = 0;
+Vc = 0;
+Vxc = zeros(M);
 Vxc_rho = 0;
 Exc = 0;
+
 for r=1:numel(rho)
     
-    if rho(r)>0
-    
-        rhoInt = rhoInt + grid.weights(r).*rho(r);
-
-        %Slater exchange
-        epsi_x = - Cx*rho(r).^(1/3);
-        Vx(r) = - 4/3 * Cx * rho(r).^(1/3);
-
-        %Constants/definitions and calculations for VWM Correlation
-        x = (3/(4*pi*rho(r))).^(1/6);
-        eta = atan(Q./(2*x+b));
-        xi = @(zeta) zeta.^2 +b.*zeta + c;
-        epsi_c = A.*(log(x.^2 ./ xi(x)) + 2*b.*eta./Q - (b*x0./xi(x0)) .* (log((x-x0).^2 ./ xi(x)) + (2.*(2*x0+b).*eta)/Q));
-
-        Vc(r) = epsi_c - A/3 * (c*(x-x0)-b*x*x0)/(xi(x).*(x-x0));
-    else 
+    if rho(r) == 0
+        
         epsi_x = 0;
         epsi_c = 0;
-        Vx(r) = 0;
-        Vc(r) = 0;
-    end
-    Vxc_rho = Vxc_rho + (Vx(r) + Vc(r))'*grid.weights(r);
-    Exc = Exc + (epsi_x + epsi_c).*rho(r)*grid.weights(r);
+        Vx = 0;
+        Vc = 0;
+    
+    else
+    
+        rhoInt = rhoInt + grid.weights(r)*rho(r);
+        
+        if ExchFunctional == 'Slater' %Slater exchange
+        	epsi_x = - Cx*rho(r)^(1/3);
+            Vx = - 4/3 * Cx * rho(r)^(1/3);
+        else
+            disp('No exchange functional specified')
+        end
 
-end
+        %Constants/definitions and calculations for VWM Correlation
+        x = (3/(4*pi*rho(r)))^(1/6);
+        eta = atan(Q/(2*x+b));
+        xi = @(zeta) zeta^2 + b*zeta + c;
+        epsi_c = A*(log(x^2 / xi(x)) + (2*b*eta/Q) - (b*x0./xi(x0)) * (log((x-x0)^2 / xi(x)) + (2*(2*x0+b)*eta)/Q));
 
-% Vxc_rho = Vx + Vc';
-% Exc = (epsi_x + epsi_c)*rho;
-
-for mu=1:M
-    for nu=1:M
-        Vxc(mu,nu) = sum(grid.weights.*basisfxn(:,mu).*Vxc_rho.*basisfxn(:,nu));
+        Vc = epsi_c - (A/3) * (c*(x-x0)-b*x*x0)/(xi(x)*(x-x0));
+        
+    end 
+        
+    
+    Vxc_rho = (Vx + Vc)';
+    Exc = Exc + (epsi_x + epsi_c)*rho(r)*grid.weights(r);
+    
+    for mu=1:M
+        for nu=1:M
+            Vxc(mu,nu) = Vxc(mu,nu) + grid.weights(r).*basisfxn(r,mu).*Vxc_rho.*basisfxn(r,nu);
+        end
     end
 end
 
