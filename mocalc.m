@@ -204,7 +204,6 @@ out.P       = P;
 out.E0      = E0;
 out.Etot    = E0 + Vnn;
 
-
 end
  
  

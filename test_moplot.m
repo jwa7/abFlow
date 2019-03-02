@@ -16,11 +16,15 @@ settings.method = 'RHF';
 settings.basisset = 'cc-pVDZ';
 settings.tolEnergy = 1e-8;
 settings.tolDensity = 1e-8;
+settings.ExchFunctional = 'Slater';
+settings.CorrFunctional = 'VWN3';
+settings.nRadialPoints = 100;
+settings.nAngularPoints = 302;
 
 out = mocalc(atoms, xyz_a0, charge, settings);
 
 %% Plotting the MOs
 
-iMO = 0.1;
-isolevel = 0.5;     % a0^(-3/2)
+iMO = 5;
+isolevel = 0.3;     % a0^(-3/2)
 moplot(atoms, xyz_a0, out, iMO, isolevel);
